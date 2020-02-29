@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "twitter_clone"
+name = "twitterclone"
 version = "0.1.0"
 description = "Twitter-like application"
 authors = ["Tamoya Hopkins <tamoyashopkins@gmail.com>"]
