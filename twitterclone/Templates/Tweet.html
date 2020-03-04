@@ -1,0 +1,14 @@
+<div name="nav block">
+    <a href="{% url 'profile' %}"><button>Profile</button></a>
+    <a href="{% url 'tweet' %}"><button>Tweet</button></a>
+    <a href="/notifications/{{current_user.id}}/"><button>Notifications: {{total_notifications}}</button></a>
+    <a href="{% url 'logout' %}"><button>Logout</button></a>
+
+</div>
+<h3>Insert your tweet below!</h3>
+<form method='POST'>
+    {% csrf_token %}
+    <p>@{{current_user}}</p>
+    {{form.as_p}}
+    <input type='Submit' value='Submit'/>
+</form>

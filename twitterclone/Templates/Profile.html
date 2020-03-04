@@ -1,0 +1,54 @@
+<html>
+    <head>
+        <title>TwitterClone!</title>
+    </head>
+    <body>
+        <div name="container">
+            <div name="nav block">
+                <a href="{% url 'profile' %}"><button>Profile</button></a>
+                <a href="{% url 'tweet' %}"><button>Tweet</button></a>
+                <a href="/notifications/{{current_user.id}}/"><button>Notifications: {{total_notifications}}</button></a>
+                <a href="{% url 'logout' %}"><button>Logout</button></a>
+
+            </div>
+
+
+            <hr>
+            <h2>Hello, @{{current_user}}</h2>
+            <div name="Content">
+                <div name="left-card">
+                    @{{current_user}}<br>
+                    Tweets: {{total_tweets}} <br>
+                    Following: {{current_user.following.all.count}} <br>
+                    <button>FOLLOW</button>
+                </div>
+                <div name="right-card">
+                    <p>FOLLOWER TWEETS</p>
+                    <ul>
+                        {% for tweet in followers_tweets %}
+                        <li><a href="/profile/{{tweet.user.id}}/">@{{tweet.user}}</a> - {{ tweet.date }} - <a
+                                href="/tweet/{{tweet.id}}/">{{tweet.text}}</a></li>
+                        {% endfor %}
+
+                    </ul>
+                    <p>MY TWEETS</p>
+                    <ul>
+                        {% for tweet in tweet_list %}
+                        <li><a href="/profile/{{tweet.user.id}}/">@{{tweet.user}}</a> - {{ tweet.date }} - <a href="/tweet/{{tweet.id}}/">{{tweet.text}}</a></li>
+                        {% endfor %}
+
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <hr>
+        <p>ALL TWEETS</p>
+        <ul>
+            {% for tweet in all_tweets %}
+            <li><a href="/profile/{{tweet.user.id}}/">@{{tweet.user}}</a> - {{tweet.date}} - <a href="/tweet/{{tweet.id}}/">{{tweet.text}}</a></li>
+            {% endfor%}
+
+        </ul>
+
+    </body>
+</html>

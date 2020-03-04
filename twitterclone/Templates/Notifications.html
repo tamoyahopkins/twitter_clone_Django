@@ -1,0 +1,42 @@
+<html>
+
+<head>
+    <title>TwitterClone!</title>
+</head>
+
+<body>
+    <div name="container">
+        <div name="nav block">
+            <a href="{% url 'profile' %}"><button>Profile</button></a>
+            <a href="{% url 'tweet' %}"><button>Tweet</button></a>
+            <a href="/notifications/{{current_user.id}}/"><button>Notifications: {{total_notifications}}</button></a>
+            <a href="{% url 'logout' %}"><button>Logout</button></a>
+
+        </div>
+
+        <hr>
+        <h2>@{{current_user.username.title}}'s notifications</h2>
+        <div name="Content">
+            <div name="left-card">
+                @{{current_user.username}}<br>
+                Tweets: {{total_tweets}} <br>
+                Following: {{current_user.following.all.count}} <br>
+                <a href="/follow/{{current_user.id}}/"><button>FOLLOW</button></a>
+
+
+
+            </div>
+            <div name="right-card">
+                <ul>
+                    {% for notice in notifications %}
+                    <li><a href="/profile/{{notice.source_tweet.user.id}}/">{{notice.source_tweet.user}}</a> - {{notice.source_tweet.date}} - {{notice.source_tweet}}</li>
+                    {% endfor %}
+
+                </ul>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

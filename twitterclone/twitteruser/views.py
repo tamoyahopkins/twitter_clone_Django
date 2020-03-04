@@ -1,143 +1,113 @@
 from django.db import models
 from django.shortcuts import get_object_or_404, redirect, render, reverse
-from twitteruser.models import MyCustomUser, Ticket
-from twitteruser.forms import LogInForm, AddTicketForm, UserCreationForm
+from twitteruser.models import MyCustomUser
+from twitteruser.forms import UserCreationForm, LogInForm
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseRedirect
+from django.http import HttpResponse
 from django.utils import timezone
-# from django.contrib.admin.views.decorators import staff_member_required
-# from django.shortcuts import reverse
-# from django.shortcuts import get_object_or_404, render, redirect
-# <QuerySet [{'id': 1, 'password': 'pbkdf2_sßha256$180000$K3EVAgsFJJre$Ny846uUEid6xQv+78ho+7HMyxtFfJu4VclGr/VrcsA4=', 'last_login': datetime.datetime(2020, 2, 22, 5, 52, 55, 431671, tzinfo=<UTC>), 'is_superuser': True, 'username': 'tamoya', 'first_name': '', 'last_name': '', 'email': 'tamoyashopkins@gmail.com', 'is_staff': True, 'is_active': True, 'date_joined': datetime.datetime(2020, 2, 22, 4, 48, 52, 813739, tzinfo=<UTC>), 'favorite_color': 'Purple!', 'home_page': None, 'display_name': '', 'age': None}]>
-# Create your views here.
-# @staff_member_required
+from tweet.models import Tweet
+from notification.models import Notification
+
 
 def login_view(request):
     if request.user.is_authenticated:
-        print(request)
-        return HttpResponseRedirect(f'/user/{request.user.id}')
+        # print('REQUEST', request)
+        return HttpResponseRedirect(f'/user/')
     else:
         if request.method == 'POST':
             form = LogInForm(data=request.POST)
 
             if form.is_valid():
+                # print('LOGIN INFO:', login(request, form.get_user()))
                 login(request, form.get_user())
-                return HttpResponseRedirect(f'/user/{request.user.id}')
+                return HttpResponseRedirect(f'/user/')
         else:
             form = LogInForm()
 
-        return render(request, 'login.html', {'form': form})
+        return render(request, 'Login.html', {'form': form})
 
 
-@login_required
-def home_page_view(request, id):
-    results = None
-    if request.method == 'POST':
-        if 'InProgress' in request.POST['SortBy']:
-            results = Ticket.objects.filter(status='In Progress', assign_to_user_id=id)
-        if 'Filed' in request.POST['SortBy']:
-            results = Ticket.objects.filter(filed_by=id)
-        if 'Completed' in request.POST['SortBy']:
-            results = Ticket.objects.filter(status='Completed', assign_to_user_id=id)
-        if 'NULL' in request.POST['SortBy']:
-            results = Ticket.objects.filter(assign_to_user_id=request.user.id).order_by('-posted_date')
-    print(request.GET)
-    current_user_id = str(request.GET)
 
-    current_user = MyCustomUser.objects.get(pk=id)
+def home_page_view(request):
+    if request.user.is_authenticated:
+        current_user = MyCustomUser.objects.get(id=request.user.id)
+        current_user_name = f'@{current_user.username}'
+        followers = [item.username for item in current_user.following.all()]
+        followers_tweets = []
 
-    all_tickets = Ticket.objects.values().order_by('-posted_date')
-    for ticket in all_tickets:
-        if ticket['assign_to_user_id']:
-            get_name = MyCustomUser.objects.filter(id=ticket['assign_to_user_id'])
-            for item in get_name:
-                ticket['assign_to_user_name'] = item.username
-        else:
-            ticket['assign_to_user_name'] = ticket['assign_to_user_id']
-    ticket_types = [
-        ('All Tickets', all_tickets),
-        ('User Tickets', results)]
-    return render(request, 'home_page.html', {
-        'ticket_types': ticket_types,
-        'current_user': current_user})
+        tweet_list = Tweet.objects.filter(user=current_user).order_by('-date')
+        total_tweets = len(tweet_list)
+        all_tweets = Tweet.objects.all().order_by('-date')
+
+        for tweet in all_tweets:
+            if str(tweet.user) != current_user.username:
+                if str(tweet.user) in followers:
+                    followers_tweets.append(tweet)
 
 
-@login_required
-def add_ticket_view(request):
-    if request.method == 'POST':
-        form = AddTicketForm(request.POST)
-        print(form)
-        if form.is_valid():
-            data = form.cleaned_data
-            ticket = form.save()
-            if data['assign_to_user']:
-                ticket.status = 'In Progress'
-                ticket.filed_by = request.user
-            else:
-                ticket.filed_by = request.user
-            ticket.save()
-            return HttpResponseRedirect(f'/')
+        notification_items = Notification.objects.filter(for_user=request.user.id)
+        total_notifications = 0
+        show_notifications = [item for item in notification_items if not item.viewed]
+        if show_notifications:
+            total_notifications = len(show_notifications)
 
-    form = AddTicketForm()
-    return render(request, 'add_ticket.html', {'form': form})
+        return render(request, 'Profile.html', {
+            'current_user': current_user,
+            'current_user_name': current_user_name,
+            'tweet_list': tweet_list,
+            'total_tweets': total_tweets,
+            'all_tweets': all_tweets,
+            'total_notifications': total_notifications,
+            'followers_tweets': followers_tweets
+        })
+    return HttpResponseRedirect(f'/')
+
 
 def logout_view(request):
     logout(request)
     return HttpResponseRedirect(f'/')
 
 
-@login_required
-def create_user_view(request):
-    if request.method == 'POST':
-        form = UserCreationForm(request.POST)
+def sign_up_view(request):
+    if request.method == "POST":
+        form = UserCreationForm(data=request.POST)
         if form.is_valid():
             data = form.cleaned_data
-            # create new user obj: {'first_name': 'Romeo', 'last_name': 'G', 'email': 'romeo@gmail.com', 'user_name': 'Romeo', 'password1': 'asdfRomeo', 'password2': 'asdfRomeo'}
-            MyCustomUser.objects.create(
-                first_name = data['first_name'],
-                last_name = data['last_name'],
-                email = data['email'],
+            # print(data)
+            MyCustomUser.objects.create_user(
+                user_name = data['user_name'],
                 username = data['user_name'],
+                email = data['email'],
                 password = data['password1'],
+                first_name = data['first_name'],
+                last_name = data['last_name']
             )
-            return HttpResponseRedirect(f'/')
-
+            new_user = MyCustomUser.objects.get(email=data['email'])
+            login(request,new_user)
+            # return render(request, 'Login.html', {'form': LogInForm, 'confirm': f"{data['user_name'].title()}'s profile created successfully!  Please login."})
+            return HttpResponseRedirect(f'/user/')
     form = UserCreationForm()
-    return render(request, 'add_user.html', {'form': form})
+    return render(request, 'Signup.html', {'form': form})
+
+def user_profile_view(request, id):
+    current_user = MyCustomUser.objects.get(id=id)
+    current_user_name = f'@{current_user.username}'
+    tweet_list = Tweet.objects.filter(user=current_user).order_by('-date')
+    total_tweets = len(tweet_list)
+    return render(request, 'User_Profile.html', {
+        'current_user': current_user,
+        'current_user_name': current_user_name,
+        'tweet_list': tweet_list,
+        'total_tweets': total_tweets,
+    })
 
 @login_required
-def ticket_detail_view(request, id):
-    # Ticket(id, title, posted_date, description, status, filed_by, assign_to_user, completed_by)
-    ticket = Ticket.objects.get(pk=id)
-    current_user_id = request.user.id
-    if ticket.assign_to_user and ticket.completed_by is None:
-        ticket.status = 'In Progress'
-        user_name = MyCustomUser.objects.get(pk=ticket.assign_to_user_id)
-    else:
-        user_name = None
-
-
-    return render(request, 'ticket_detail.html', {
-        'ticket': ticket,
-        'current_user_id': current_user_id,
-        'user_name': user_name})
-
-@login_required
-def edit_ticket_view(request, id):
-    instance = Ticket.objects.get(pk=id)
-    if request.method == 'POST':
-        form = AddTicketForm(request.POST, instance=instance)
-        form.save()
-        return HttpResponseRedirect(reverse('ticket', args=(instance.id,)))
-
-    form = AddTicketForm(instance=instance)
-    return render(request, 'edit_ticket.html', {'form': form})
-
-def ticket_completed_view(request, ticket_id):
-    ticket = Ticket.objects.get(id=ticket_id)
-    ticket.status='Completed'
-    ticket.completed_by=request.user
-    ticket.save()
-    return HttpResponseRedirect(f'/')
+def follow_user_view(request, id):
+    current_user = MyCustomUser.objects.get(id=id)
+    logged_in_user = MyCustomUser.objects.get(id=request.user.id)
+    logged_in_user.following.add(current_user)
+    # data = False
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
 

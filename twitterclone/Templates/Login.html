@@ -1,0 +1,12 @@
+<h1>Welcome to TwitterClone.</h1>
+<h2>Please login or sign-up below.</h2>
+{% if confirm %}
+    <p style="color: blue;">{{ confirm }}</p>
+{% endif %}
+
+<form method='POST'>
+    {% csrf_token %}
+    {{ form.as_p }}
+    <input type='Submit' value='Login' />
+</form>
+<p>Not a user? <a href="{% url 'signup' %}"><input type='Submit' value='Sign-up!' /></a></p>
