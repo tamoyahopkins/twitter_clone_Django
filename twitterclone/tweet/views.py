@@ -1,4 +1,3 @@
-from django.views.generic import View
 from django.shortcuts import render, get_object_or_404
 from tweet.forms import Tweet_form
 from tweet.models import Tweet
@@ -37,11 +36,6 @@ def tweet_view(request):
     form = Tweet_form()
     return render(request, 'tweet.html', {'form': form, 'current_user': current_user})
 
-# def see_tweet_view(request, id):
-#     tweet_content = Tweet.objects.get(pk=id)
-#     return render(request, 'tweet_content.html', {'tweet': tweet_content})
-
-class Seetweet(View):
-    def get(self, request, id):
-        tweet_content = Tweet.objects.get(pk=id)
-        return render(request, 'tweet_content.html', {'tweet': tweet_content})
+def see_tweet_view(request, id):
+    tweet_content = Tweet.objects.get(pk=id)
+    return render(request, 'tweet_content.html', {'tweet': tweet_content})
