@@ -1,4 +1,5 @@
 from django.db import models
+from django.views.generic import View
 from django.shortcuts import get_object_or_404, redirect, render, reverse
 from twitteruser.models import MyCustomUser
 from twitteruser.forms import UserCreationForm, LogInForm
@@ -11,63 +12,65 @@ from tweet.models import Tweet
 from notification.models import Notification
 
 
-def login_view(request):
-    if request.user.is_authenticated:
-        # print('REQUEST', request)
-        return HttpResponseRedirect(f'/user/')
-    else:
-        if request.method == 'POST':
-            form = LogInForm(data=request.POST)
 
-            if form.is_valid():
-                # print('LOGIN INFO:', login(request, form.get_user()))
-                login(request, form.get_user())
-                return HttpResponseRedirect(f'/user/')
-        else:
-            form = LogInForm()
+class Login(View):
+    html = 'Login.html'
+    def get(self, request):
+        form = LogInForm(request)
+        if request.user.is_authenticated:
+            return HttpResponseRedirect(reverse('profile'))
+        return render(request, self.html, {'form': form})
 
-        return render(request, 'Login.html', {'form': form})
-
+    def post(self, request):
+        form = LogInForm(request, request.POST)
+        if form.is_valid():
+            login(request, form.get_user())
+            return HttpResponseRedirect(reverse('profile'))
+        return render(request, self.html, {'form': form})
 
 
-def home_page_view(request):
-    if request.user.is_authenticated:
-        current_user = MyCustomUser.objects.get(id=request.user.id)
-        current_user_name = f'@{current_user.username}'
-        followers = [item.username for item in current_user.following.all()]
-        followers_tweets = []
 
-        tweet_list = Tweet.objects.filter(user=current_user).order_by('-date')
-        total_tweets = len(tweet_list)
-        all_tweets = Tweet.objects.all().order_by('-date')
+class Homepage(View):
+    def get(self, request):
+        if request.user.is_authenticated:
+            current_user = MyCustomUser.objects.get(id=request.user.id)
+            current_user_name = f'@{current_user.username}'
+            followers = [item.username for item in current_user.following.all()]
+            followers_tweets = []
 
-        for tweet in all_tweets:
-            if str(tweet.user) != current_user.username:
-                if str(tweet.user) in followers:
-                    followers_tweets.append(tweet)
+            tweet_list = Tweet.objects.filter(user=current_user).order_by('-date')
+            total_tweets = len(tweet_list)
+            all_tweets = Tweet.objects.all().order_by('-date')
 
-
-        notification_items = Notification.objects.filter(for_user=request.user.id)
-        total_notifications = 0
-        show_notifications = [item for item in notification_items if not item.viewed]
-        if show_notifications:
-            total_notifications = len(show_notifications)
-
-        return render(request, 'Profile.html', {
-            'current_user': current_user,
-            'current_user_name': current_user_name,
-            'tweet_list': tweet_list,
-            'total_tweets': total_tweets,
-            'all_tweets': all_tweets,
-            'total_notifications': total_notifications,
-            'followers_tweets': followers_tweets
-        })
-    return HttpResponseRedirect(f'/')
+            for tweet in all_tweets:
+                if str(tweet.user) != current_user.username:
+                    if str(tweet.user) in followers:
+                        followers_tweets.append(tweet)
 
 
-def logout_view(request):
-    logout(request)
-    return HttpResponseRedirect(f'/')
+            notification_items = Notification.objects.filter(for_user=request.user.id)
+            total_notifications = 0
+            show_notifications = [item for item in notification_items if not item.viewed]
+            if show_notifications:
+                total_notifications = len(show_notifications)
+
+            return render(request, 'Profile.html', {
+                'current_user': current_user,
+                'current_user_name': current_user_name,
+                'tweet_list': tweet_list,
+                'total_tweets': total_tweets,
+                'all_tweets': all_tweets,
+                'total_notifications': total_notifications,
+                'followers_tweets': followers_tweets
+            })
+        return HttpResponseRedirect(reverse('login'))
+
+
+
+class Logout(View):
+    def get(self, request):
+        logout(request)
+        return HttpResponseRedirect(reverse('login'))
 
 
 def sign_up_view(request):
@@ -90,6 +93,9 @@ def sign_up_view(request):
             return HttpResponseRedirect(f'/user/')
     form = UserCreationForm()
     return render(request, 'Signup.html', {'form': form})
+
+
+
 
 def user_profile_view(request, id):
     current_user = MyCustomUser.objects.get(id=id)
